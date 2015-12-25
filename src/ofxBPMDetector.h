@@ -14,8 +14,10 @@
 #define ofxBPMDetector_h
 
 #include <stdio.h>
+#include <vector>
 
 #include "bpmdetect.h"
+
 
 class ofxBPMDetector
 {
@@ -25,6 +27,7 @@ class ofxBPMDetector
     ofxBPMDetector(int numChannels = 2, int sampleRate = 44100, int minBPM= MIN_BPM, int maxBPM = MAX_BPM);
     ~ofxBPMDetector();
 
+    void processFrame(std::vector<float> inputs, int nChannels);
     void processFrame(float *input, int bufferSize, int nChannels);
     float getBPM();
     

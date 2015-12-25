@@ -35,6 +35,11 @@ void ofxBPMDetector::processFrame(float *input, int bufferSize, int nChannels){
     detector->inputSamples(input, bufferSize);
 }
 
+void ofxBPMDetector::processFrame(std::vector<float> inputs, int nChannels){
+    assert(nChannels == this->nChannels);
+    detector->inputSamples(inputs.data(), inputs.size());
+}
+
 float ofxBPMDetector::getBPM(){
     return detector->getBpm();
 }
