@@ -1,7 +1,8 @@
 # ofxBPMDetector
 openFrameworks addon for BPM detection<br>
 
-Compiled and tested on OS X 10.10.5 Yosemite with Xcode 7.1, openFrameworks 0.8.4 (**2015.11.20**)
+Compiled and tested on OS X 10.10.5 Yosemite 
+with Xcode 7.2, openFrameworks 0.9.0 (**2015.12.25**)
 
 #### TODO
 - to add a flag to indicate if the detector has enough audio samples to estimate BPM or not.
