@@ -9,10 +9,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:07 $
-// File revision : $Revision: 1.4 $
+// Last changed  : $Date: 2011-12-30 22:33:46 +0200 (pe, 30 joulu 2011) $
+// File revision : $Revision: 4 $
 //
-// $Id: PeakFinder.h,v 1.4 2006/02/05 16:44:07 Olli Exp $
+// $Id: PeakFinder.h 132 2011-12-30 20:33:46Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -40,6 +40,9 @@
 #ifndef _PeakFinder_H_
 #define _PeakFinder_H_
 
+namespace soundtouch
+{
+
 class PeakFinder
 {
 protected:
@@ -47,7 +50,7 @@ protected:
     int minPos, maxPos;
 
     /// Calculates the mass center between given vector items.
-    float calcMassCenter(const float *data, ///< Data vector.
+    double calcMassCenter(const float *data, ///< Data vector.
                          int firstPos,      ///< Index of first vector item beloging to the peak.
                          int lastPos        ///< Index of last vector item beloging to the peak.
                          ) const;
@@ -60,6 +63,10 @@ protected:
                             int direction       /// Direction where to proceed from the peak: 1 = right, -1 = left.
                             ) const;
 
+    // Finds real 'top' of a peak hump from neighnourhood of the given 'peakpos'.
+    int findTop(const float *data, int peakpos) const;
+
+
     /// Finds the 'ground' level, i.e. smallest level between two neighbouring peaks, to right- 
     /// or left-hand side of the given peak position.
     int   findGround(const float *data,     /// Data vector.
@@ -67,19 +74,24 @@ protected:
                      int direction          /// Direction where to proceed from the peak: 1 = right, -1 = left.
                      ) const;
 
+    /// get exact center of peak near given position by calculating local mass of center
+    double getPeakCenter(const float *data, int peakpos) const;
+
 public:
     /// Constructor. 
     PeakFinder();
 
     /// Detect exact peak position of the data vector by finding the largest peak 'hump'
-    /// and calculating the mass-center location of the peak hump. 
+    /// and calculating the mass-center location of the peak hump.
     ///
-    /// \return The exact mass-center location of the largest peak hump.
-    float detectPeak(const float *data, /// Data vector to be analyzed. The data vector has
+    /// \return The location of the largest base harmonic peak hump.
+    double detectPeak(const float *data, /// Data vector to be analyzed. The data vector has
                                         /// to be at least 'maxPos' items long.
                      int minPos,        ///< Min allowed peak location within the vector data.
                      int maxPos         ///< Max allowed peak location within the vector data.
                      );
 };
+
+}
 
 #endif // _PeakFinder_H_

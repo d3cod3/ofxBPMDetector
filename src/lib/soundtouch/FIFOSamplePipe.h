@@ -12,15 +12,15 @@
 /// may be either another processing stage, or a fifo sample buffer object.
 ///
 /// Author        : Copyright (c) Olli Parviainen
-/// Author e-mail : oparviai @ iki.fi
-/// SoundTouch WWW: http://www.iki.fi/oparviai/soundtouch
+/// Author e-mail : oparviai 'at' iki.fi
+/// SoundTouch WWW: http://www.surina.net/soundtouch
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2005-02-10 05:11:55 -0800 (Thu, 10 Feb 2005) $
-// File revision : $Revision: 857 $
+// Last changed  : $Date: 2012-06-13 22:29:53 +0300 (ke, 13 kesä 2012) $
+// File revision : $Revision: 4 $
 //
-// $Id: FIFOSamplePipe.h 857 2005-02-10 13:11:55Z tuehaste $
+// $Id: FIFOSamplePipe.h 143 2012-06-13 19:29:53Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -59,6 +59,10 @@ namespace soundtouch
 class FIFOSamplePipe
 {
 public:
+    // virtual default destructor
+    virtual ~FIFOSamplePipe() {}
+
+
     /// Returns a pointer to the beginning of the output samples. 
     /// This function is provided for accessing the output samples directly. 
     /// Please be careful for not to corrupt the book-keeping!
@@ -66,12 +70,12 @@ public:
     /// When using this function to output samples, also remember to 'remove' the
     /// output samples from the buffer by calling the 
     /// 'receiveSamples(numSamples)' function
-    virtual SAMPLETYPE *ptrBegin() const = 0;
+    virtual SAMPLETYPE *ptrBegin() = 0;
 
     /// Adds 'numSamples' pcs of samples from the 'samples' memory position to
     /// the sample buffer.
     virtual void putSamples(const SAMPLETYPE *samples,  ///< Pointer to samples.
-                            uint numSamples                         ///< Number of samples to insert.
+                            uint numSamples             ///< Number of samples to insert.
                             ) = 0;
 
 
@@ -110,6 +114,11 @@ public:
 
     /// Clears all the samples.
     virtual void clear() = 0;
+
+    /// allow trimming (downwards) amount of samples in pipeline.
+    /// Returns adjusted amount of samples
+    virtual uint adjustAmountOfSamples(uint numSamples) = 0;
+
 };
 
 
@@ -166,7 +175,7 @@ protected:
     /// When using this function to output samples, also remember to 'remove' the
     /// output samples from the buffer by calling the 
     /// 'receiveSamples(numSamples)' function
-    virtual SAMPLETYPE *ptrBegin() const
+    virtual SAMPLETYPE *ptrBegin()
     {
         return output->ptrBegin();
     }
@@ -210,6 +219,14 @@ public:
     {
         return output->isEmpty();
     }
+
+    /// allow trimming (downwards) amount of samples in pipeline.
+    /// Returns adjusted amount of samples
+    virtual uint adjustAmountOfSamples(uint numSamples)
+    {
+        return output->adjustAmountOfSamples(numSamples);
+    }
+
 };
 
 }

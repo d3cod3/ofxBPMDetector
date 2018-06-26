@@ -36,15 +36,15 @@
 ///   combining the two other controls.
 ///
 /// Author        : Copyright (c) Olli Parviainen
-/// Author e-mail : oparviai @ iki.fi
-/// SoundTouch WWW: http://www.iki.fi/oparviai/soundtouch
+/// Author e-mail : oparviai 'at' iki.fi
+/// SoundTouch WWW: http://www.surina.net/soundtouch
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2005-02-10 05:11:55 -0800 (Thu, 10 Feb 2005) $
-// File revision : $Revision: 857 $
+// Last changed  : $Date: 2016-10-15 22:34:59 +0300 (la, 15 loka 2016) $
+// File revision : $Revision: 4 $
 //
-// $Id: SoundTouch.cpp 857 2005-02-10 13:11:55Z tuehaste $
+// $Id: SoundTouch.cpp 243 2016-10-15 19:34:59Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -73,7 +73,6 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <math.h>
-#include <stdexcept>
 #include <stdio.h>
 
 #include "SoundTouch.h"
@@ -82,8 +81,12 @@
 #include "cpu_detect.h"
 
 using namespace soundtouch;
+    
+/// test if two floating point numbers are equal
+#define TEST_FLOAT_EQUAL(a, b)  (fabs(a - b) < 1e-10)
 
-/// Print library version string
+
+/// Print library version string for autoconf
 extern "C" void soundtouch_ac_test()
 {
     printf("SoundTouch Version: %s\n",SOUNDTOUCH_VERSION);
@@ -94,7 +97,7 @@ SoundTouch::SoundTouch()
 {
     // Initialize rate transposer and tempo changer instances
 
-    pRateTransposer = RateTransposer::newInstance();
+    pRateTransposer = new RateTransposer();
     pTDStretch = TDStretch::newInstance();
 
     setOutPipe(pTDStretch);
@@ -107,8 +110,11 @@ SoundTouch::SoundTouch()
 
     calcEffectiveRateAndTempo();
 
+    samplesExpectedOut = 0;
+    samplesOutput = 0;
+
     channels = 0;
-    bSrateSet = FALSE;
+    bSrateSet = false;
 }
 
 
@@ -140,20 +146,21 @@ uint SoundTouch::getVersionId()
 // Sets the number of channels, 1 = mono, 2 = stereo
 void SoundTouch::setChannels(uint numChannels)
 {
-    if (numChannels != 1 && numChannels != 2) 
+    /*if (numChannels != 1 && numChannels != 2) 
     {
-        throw std::runtime_error("Illegal number of channels");
-    }
+        //ST_THROW_RT_ERROR("Illegal number of channels");
+        return;
+    }*/
     channels = numChannels;
-    pRateTransposer->setChannels(numChannels);
-    pTDStretch->setChannels(numChannels);
+    pRateTransposer->setChannels((int)numChannels);
+    pTDStretch->setChannels((int)numChannels);
 }
 
 
 
 // Sets new rate control value. Normal rate = 1.0, smaller values
 // represent slower rate, larger faster rates.
-void SoundTouch::setRate(float newRate)
+void SoundTouch::setRate(double newRate)
 {
     virtualRate = newRate;
     calcEffectiveRateAndTempo();
@@ -163,9 +170,9 @@ void SoundTouch::setRate(float newRate)
 
 // Sets new rate control value as a difference in percents compared
 // to the original rate (-50 .. +100 %)
-void SoundTouch::setRateChange(float newRate)
+void SoundTouch::setRateChange(double newRate)
 {
-    virtualRate = 1.0f + 0.01f * newRate;
+    virtualRate = 1.0 + 0.01 * newRate;
     calcEffectiveRateAndTempo();
 }
 
@@ -173,7 +180,7 @@ void SoundTouch::setRateChange(float newRate)
 
 // Sets new tempo control value. Normal tempo = 1.0, smaller values
 // represent slower tempo, larger faster tempo.
-void SoundTouch::setTempo(float newTempo)
+void SoundTouch::setTempo(double newTempo)
 {
     virtualTempo = newTempo;
     calcEffectiveRateAndTempo();
@@ -183,9 +190,9 @@ void SoundTouch::setTempo(float newTempo)
 
 // Sets new tempo control value as a difference in percents compared
 // to the original tempo (-50 .. +100 %)
-void SoundTouch::setTempoChange(float newTempo)
+void SoundTouch::setTempoChange(double newTempo)
 {
-    virtualTempo = 1.0f + 0.01f * newTempo;
+    virtualTempo = 1.0 + 0.01 * newTempo;
     calcEffectiveRateAndTempo();
 }
 
@@ -193,7 +200,7 @@ void SoundTouch::setTempoChange(float newTempo)
 
 // Sets new pitch control value. Original pitch = 1.0, smaller values
 // represent lower pitches, larger values higher pitch.
-void SoundTouch::setPitch(float newPitch)
+void SoundTouch::setPitch(double newPitch)
 {
     virtualPitch = newPitch;
     calcEffectiveRateAndTempo();
@@ -203,9 +210,9 @@ void SoundTouch::setPitch(float newPitch)
 
 // Sets pitch change in octaves compared to the original pitch
 // (-1.00 .. +1.00)
-void SoundTouch::setPitchOctaves(float newPitch)
+void SoundTouch::setPitchOctaves(double newPitch)
 {
-    virtualPitch = (float)exp(0.69314718056f * newPitch);
+    virtualPitch = exp(0.69314718056 * newPitch);
     calcEffectiveRateAndTempo();
 }
 
@@ -215,14 +222,14 @@ void SoundTouch::setPitchOctaves(float newPitch)
 // (-12 .. +12)
 void SoundTouch::setPitchSemiTones(int newPitch)
 {
-    setPitchOctaves((float)newPitch / 12.0f);
+    setPitchOctaves((double)newPitch / 12.0);
 }
 
 
 
-void SoundTouch::setPitchSemiTones(float newPitch)
+void SoundTouch::setPitchSemiTones(double newPitch)
 {
-    setPitchOctaves(newPitch / 12.0f);
+    setPitchOctaves(newPitch / 12.0);
 }
 
 
@@ -230,16 +237,34 @@ void SoundTouch::setPitchSemiTones(float newPitch)
 // nominal control values.
 void SoundTouch::calcEffectiveRateAndTempo()
 {
-    float oldTempo = tempo;
-    float oldRate = rate;
+    double oldTempo = tempo;
+    double oldRate = rate;
 
     tempo = virtualTempo / virtualPitch;
     rate = virtualPitch * virtualRate;
 
-    if (rate != oldRate) pRateTransposer->setRate(rate);
-    if (tempo != oldTempo) pTDStretch->setTempo(tempo);
+    if (!TEST_FLOAT_EQUAL(rate,oldRate)) pRateTransposer->setRate(rate);
+    if (!TEST_FLOAT_EQUAL(tempo, oldTempo)) pTDStretch->setTempo(tempo);
 
-    if (rate > 1.0f) 
+#ifndef SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER
+    if (rate <= 1.0f) 
+    {
+        if (output != pTDStretch) 
+        {
+            FIFOSamplePipe *tempoOut;
+
+            assert(output == pRateTransposer);
+            // move samples in the current output buffer to the output of pTDStretch
+            tempoOut = pTDStretch->getOutput();
+            tempoOut->moveSamples(*output);
+            // move samples in pitch transposer's store buffer to tempo changer's input
+            // deprecated : pTDStretch->moveSamples(*pRateTransposer->getStore());
+
+            output = pTDStretch;
+        }
+    }
+    else
+#endif
     {
         if (output != pRateTransposer) 
         {
@@ -255,49 +280,33 @@ void SoundTouch::calcEffectiveRateAndTempo()
             output = pRateTransposer;
         }
     } 
-    else 
-    {
-        if (output != pTDStretch) 
-        {
-            FIFOSamplePipe *tempoOut;
-
-            assert(output == pRateTransposer);
-            // move samples in the current output buffer to the output of pTDStretch
-            tempoOut = pTDStretch->getOutput();
-            tempoOut->moveSamples(*output);
-            // move samples in pitch transposer's store buffer to tempo changer's input
-            pTDStretch->moveSamples(*pRateTransposer->getStore());
-
-            output = pTDStretch;
-
-        }
-    }
 }
 
 
 // Sets sample rate.
 void SoundTouch::setSampleRate(uint srate)
 {
-    bSrateSet = TRUE;
+    bSrateSet = true;
     // set sample rate, leave other tempo changer parameters as they are.
-    pTDStretch->setParameters(srate);
+    pTDStretch->setParameters((int)srate);
 }
 
 
 // Adds 'numSamples' pcs of samples from the 'samples' memory position into
 // the input of the object.
-void SoundTouch::putSamples(const SAMPLETYPE *samples, uint numSamples)
+void SoundTouch::putSamples(const SAMPLETYPE *samples, uint nSamples)
 {
-    if (bSrateSet == FALSE) 
+    if (bSrateSet == false) 
     {
-        throw std::runtime_error("SoundTouch : Sample rate not defined");
+        ST_THROW_RT_ERROR("SoundTouch : Sample rate not defined");
     } 
     else if (channels == 0) 
     {
-        throw std::runtime_error("SoundTouch : Number of channels not defined");
+        ST_THROW_RT_ERROR("SoundTouch : Number of channels not defined");
     }
 
     // Transpose the rate of the new samples if necessary
+    /* Bypass the nominal setting - can introduce a click in sound when tempo/pitch control crosses the nominal value...
     if (rate == 1.0f) 
     {
         // The rate value is same as the original, simply evaluate the tempo changer. 
@@ -308,21 +317,28 @@ void SoundTouch::putSamples(const SAMPLETYPE *samples, uint numSamples)
             // (may happen if 'rate' changes from a non-zero value to zero)
             pTDStretch->moveSamples(*pRateTransposer);
         }
-        pTDStretch->putSamples(samples, numSamples);
+        pTDStretch->putSamples(samples, nSamples);
     } 
-    else if (rate < 1.0f) 
+    */
+
+    // accumulate how many samples are expected out from processing, given the current 
+    // processing setting
+    samplesExpectedOut += (double)nSamples / ((double)rate * (double)tempo);
+
+#ifndef SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER
+    if (rate <= 1.0f) 
     {
         // transpose the rate down, output the transposed sound to tempo changer buffer
         assert(output == pTDStretch);
-        pRateTransposer->putSamples(samples, numSamples);
+        pRateTransposer->putSamples(samples, nSamples);
         pTDStretch->moveSamples(*pRateTransposer);
     } 
     else 
+#endif
     {
-        assert(rate > 1.0f);
         // evaluate the tempo changer, then transpose the rate up, 
         assert(output == pRateTransposer);
-        pTDStretch->putSamples(samples, numSamples);
+        pTDStretch->putSamples(samples, nSamples);
         pRateTransposer->moveSamples(*pTDStretch);
     }
 }
@@ -338,35 +354,40 @@ void SoundTouch::putSamples(const SAMPLETYPE *samples, uint numSamples)
 void SoundTouch::flush()
 {
     int i;
-    uint nOut;
-    SAMPLETYPE buff[128];
+    int numStillExpected;
+    SAMPLETYPE *buff = new SAMPLETYPE[128 * channels];
 
-    nOut = numSamples();
+    // how many samples are still expected to output
+    numStillExpected = (int)((long)(samplesExpectedOut + 0.5) - samplesOutput);
+    if (numStillExpected < 0) numStillExpected = 0;
 
-    memset(buff, 0, 128 * sizeof(SAMPLETYPE));
+    memset(buff, 0, 128 * channels * sizeof(SAMPLETYPE));
     // "Push" the last active samples out from the processing pipeline by
     // feeding blank samples into the processing pipeline until new, 
     // processed samples appear in the output (not however, more than 
-    // 8ksamples in any case)
-    for (i = 0; i < 128; i ++) 
+    // 24ksamples in any case)
+    for (i = 0; (numStillExpected > (int)numSamples()) && (i < 200); i ++)
     {
-        putSamples(buff, 64);
-        if (numSamples() != nOut) break;  // new samples have appeared in the output!
+        putSamples(buff, 128);
     }
 
-    // Clear working buffers
-    pRateTransposer->clear();
+    adjustAmountOfSamples(numStillExpected);
+
+    delete[] buff;
+
+    // Clear input buffers
+ //   pRateTransposer->clearInput();
     pTDStretch->clearInput();
-    // yet leave the 'tempoChanger' output intouched as that's where the
+    // yet leave the output intouched as that's where the
     // flushed samples are!
 }
 
 
 // Changes a setting controlling the processing system behaviour. See the
 // 'SETTING_...' defines for available setting ID's.
-bool SoundTouch::setSetting(uint settingId, uint value)
+bool SoundTouch::setSetting(int settingId, int value)
 {
-    uint sampleRate, sequenceMs, seekWindowMs, overlapMs;
+    int sampleRate, sequenceMs, seekWindowMs, overlapMs;
 
     // read current tdstretch routine parameters
     pTDStretch->getParameters(&sampleRate, &sequenceMs, &seekWindowMs, &overlapMs);
@@ -375,36 +396,36 @@ bool SoundTouch::setSetting(uint settingId, uint value)
     {
         case SETTING_USE_AA_FILTER :
             // enables / disabless anti-alias filter
-            pRateTransposer->enableAAFilter((value != 0) ? TRUE : FALSE);
-            return TRUE;
+            pRateTransposer->enableAAFilter((value != 0) ? true : false);
+            return true;
 
         case SETTING_AA_FILTER_LENGTH :
             // sets anti-alias filter length
             pRateTransposer->getAAFilter()->setLength(value);
-            return TRUE;
+            return true;
 
         case SETTING_USE_QUICKSEEK :
             // enables / disables tempo routine quick seeking algorithm
-            pTDStretch->enableQuickSeek((value != 0) ? TRUE : FALSE);
-            return TRUE;
+            pTDStretch->enableQuickSeek((value != 0) ? true : false);
+            return true;
 
         case SETTING_SEQUENCE_MS:
             // change time-stretch sequence duration parameter
             pTDStretch->setParameters(sampleRate, value, seekWindowMs, overlapMs);
-            return TRUE;
+            return true;
 
         case SETTING_SEEKWINDOW_MS:
             // change time-stretch seek window length parameter
             pTDStretch->setParameters(sampleRate, sequenceMs, value, overlapMs);
-            return TRUE;
+            return true;
 
         case SETTING_OVERLAP_MS:
             // change time-stretch overlap length parameter
             pTDStretch->setParameters(sampleRate, sequenceMs, seekWindowMs, value);
-            return TRUE;
+            return true;
 
         default :
-            return FALSE;
+            return false;
     }
 }
 
@@ -413,20 +434,20 @@ bool SoundTouch::setSetting(uint settingId, uint value)
 // 'SETTING_...' defines for available setting ID's.
 //
 // Returns the setting value.
-uint SoundTouch::getSetting(uint settingId) const
+int SoundTouch::getSetting(int settingId) const
 {
-    uint temp;
+    int temp;
 
     switch (settingId) 
     {
         case SETTING_USE_AA_FILTER :
-            return pRateTransposer->isAAFilterEnabled();
+            return (uint)pRateTransposer->isAAFilterEnabled();
 
         case SETTING_AA_FILTER_LENGTH :
             return pRateTransposer->getAAFilter()->getLength();
 
         case SETTING_USE_QUICKSEEK :
-            return pTDStretch->isQuickSeekEnabled();
+            return (uint)pTDStretch->isQuickSeekEnabled();
 
         case SETTING_SEQUENCE_MS:
             pTDStretch->getParameters(NULL, &temp, NULL, NULL);
@@ -440,16 +461,65 @@ uint SoundTouch::getSetting(uint settingId) const
             pTDStretch->getParameters(NULL, NULL, NULL, &temp);
             return temp;
 
+        case SETTING_NOMINAL_INPUT_SEQUENCE :
+        {
+            int size = pTDStretch->getInputSampleReq();
+
+#ifndef SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER
+            if (rate <= 1.0)
+            {
+                // transposing done before timestretch, which impacts latency
+                return (int)(size * rate + 0.5);
+            }
+#endif
+            return size;
+        }
+
+        case SETTING_NOMINAL_OUTPUT_SEQUENCE :
+        {
+            int size = pTDStretch->getOutputBatchSize();
+
+            if (rate > 1.0)
+            {
+                // transposing done after timestretch, which impacts latency
+                return (int)(size / rate + 0.5);
+            }
+            return size;
+        }
+
+        case SETTING_INITIAL_LATENCY:
+        {
+            double latency = pTDStretch->getLatency();
+            int latency_tr = pRateTransposer->getLatency();
+
+#ifndef SOUNDTOUCH_PREVENT_CLICK_AT_RATE_CROSSOVER
+            if (rate <= 1.0)
+            {
+                // transposing done before timestretch, which impacts latency
+                latency = (latency + latency_tr) * rate;
+            }
+            else
+#endif
+            {
+                latency += (double)latency_tr / rate;
+            }
+
+            return (int)(latency + 0.5);
+        }
+
         default :
             return 0;
     }
 }
 
 
+
 // Clears all the samples in the object's output and internal processing
 // buffers.
 void SoundTouch::clear()
 {
+    samplesExpectedOut = 0;
+    samplesOutput = 0;
     pRateTransposer->clear();
     pTDStretch->clear();
 }
@@ -469,4 +539,40 @@ uint SoundTouch::numUnprocessedSamples() const
         }
     }
     return 0;
+}
+
+
+
+/// Output samples from beginning of the sample buffer. Copies requested samples to 
+/// output buffer and removes them from the sample buffer. If there are less than 
+/// 'numsample' samples in the buffer, returns all that available.
+///
+/// \return Number of samples returned.
+uint SoundTouch::receiveSamples(SAMPLETYPE *output, uint maxSamples)
+{
+    uint ret = FIFOProcessor::receiveSamples(output, maxSamples);
+    samplesOutput += (long)ret;
+    return ret;
+}
+
+
+/// Adjusts book-keeping so that given number of samples are removed from beginning of the 
+/// sample buffer without copying them anywhere. 
+///
+/// Used to reduce the number of samples in the buffer when accessing the sample buffer directly
+/// with 'ptrBegin' function.
+uint SoundTouch::receiveSamples(uint maxSamples)
+{
+    uint ret = FIFOProcessor::receiveSamples(maxSamples);
+    samplesOutput += (long)ret;
+    return ret;
+}
+
+
+/// Get ratio between input and output audio durations, useful for calculating
+/// processed output duration: if you'll process a stream of N samples, then 
+/// you can expect to get out N * getInputOutputSampleRatio() samples.
+double SoundTouch::getInputOutputSampleRatio()
+{
+    return 1.0 / (tempo * rate);
 }

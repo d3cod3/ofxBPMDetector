@@ -14,15 +14,20 @@
 #include "ofxBPMDetector.h"
 
 
-//ofxBPMDetector::ofxBPMDetector(){
-//    detector = new BpmDetect(nChannels, sampleRate, MIN_BPM, MAX_BPM);
-//}
-
-ofxBPMDetector::ofxBPMDetector(int nChannels, int sampleRate, int minBPM, int maxBPM){
-    detector = new BpmDetect(nChannels, sampleRate, minBPM, maxBPM);
+ofxBPMDetector::ofxBPMDetector(int nChannels, int sampleRate, int spectrumSize){
+    detector = new soundtouch::BPMDetect(nChannels, sampleRate);
     this->nChannels = nChannels;
     this->sampleRate = sampleRate;
-    
+    this->spectrumSize = spectrumSize;
+
+    historyPos = 0;
+
+    for(int l = 0; l < ENERGY_HISTORY; l++){
+        energyHistory[l] = 0;
+    }
+    averageEnergy = 0;
+    variance = 0;
+    beatValue = 0;
 }
 
 
@@ -37,9 +42,29 @@ void ofxBPMDetector::processFrame(float *input, int bufferSize, int nChannels){
 
 void ofxBPMDetector::processFrame(std::vector<float> inputs, int nChannels){
     assert(nChannels == this->nChannels);
-    detector->inputSamples(inputs.data(), inputs.size());
+    detector->inputSamples(inputs.data(), static_cast<int>(inputs.size()));
 }
 
 float ofxBPMDetector::getBPM(){
     return detector->getBpm();
+}
+
+bool ofxBPMDetector::getPeak(float &power){
+
+    variance += pow(power, 2);
+
+    beatValue = (-0.00025714f*variance)+1.35f;
+
+    averageEnergy = 0;
+    for(int h = 0; h < ENERGY_HISTORY; h++) {
+        averageEnergy += energyHistory[h];
+    }
+    averageEnergy /= ENERGY_HISTORY;
+
+    energyHistory[historyPos] = power;
+
+    historyPos = (historyPos+1) % ENERGY_HISTORY;
+
+
+    return power > averageEnergy*beatValue;
 }

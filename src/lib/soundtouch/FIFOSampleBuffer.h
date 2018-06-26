@@ -10,15 +10,15 @@
 /// whenever necessary.
 ///
 /// Author        : Copyright (c) Olli Parviainen
-/// Author e-mail : oparviai @ iki.fi
-/// SoundTouch WWW: http://www.iki.fi/oparviai/soundtouch
+/// Author e-mail : oparviai 'at' iki.fi
+/// SoundTouch WWW: http://www.surina.net/soundtouch
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2005-02-10 05:11:55 -0800 (Thu, 10 Feb 2005) $
-// File revision : $Revision: 857 $
+// Last changed  : $Date: 2014-01-05 23:40:22 +0200 (su, 05 tammi 2014) $
+// File revision : $Revision: 4 $
 //
-// $Id: FIFOSampleBuffer.h 857 2005-02-10 13:11:55Z tuehaste $
+// $Id: FIFOSampleBuffer.h 177 2014-01-05 21:40:22Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -85,15 +85,15 @@ private:
     void rewind();
 
     /// Ensures that the buffer has capacity for at least this many samples.
-    void ensureCapacity(const uint capacityRequirement);
+    void ensureCapacity(uint capacityRequirement);
 
     /// Returns current capacity.
     uint getCapacity() const;
- 
+
 public:
 
     /// Constructor
-    FIFOSampleBuffer(uint numChannels = 2     ///< Number of channels, 1=mono, 2=stereo.
+    FIFOSampleBuffer(int numChannels = 2     ///< Number of channels, 1=mono, 2=stereo.
                                               ///< Default is stereo.
                      );
 
@@ -107,7 +107,7 @@ public:
     /// When using this function to output samples, also remember to 'remove' the
     /// output samples from the buffer by calling the 
     /// 'receiveSamples(numSamples)' function
-    virtual SAMPLETYPE *ptrBegin() const;
+    virtual SAMPLETYPE *ptrBegin();
 
     /// Returns a pointer to the end of the used part of the sample buffer (i.e. 
     /// where the new samples are to be inserted). This function may be used for 
@@ -160,13 +160,23 @@ public:
     virtual uint numSamples() const;
 
     /// Sets number of channels, 1 = mono, 2 = stereo.
-    void setChannels(uint numChannels);
+    void setChannels(int numChannels);
+
+    /// Get number of channels
+    int getChannels() 
+    {
+        return channels;
+    }
 
     /// Returns nonzero if there aren't any samples available for outputting.
     virtual int isEmpty() const;
 
     /// Clears all the samples.
     virtual void clear();
+
+    /// allow trimming (downwards) amount of samples in pipeline.
+    /// Returns adjusted amount of samples
+    uint adjustAmountOfSamples(uint numSamples);
 };
 
 }

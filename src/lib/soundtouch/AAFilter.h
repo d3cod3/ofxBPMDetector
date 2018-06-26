@@ -8,15 +8,15 @@
 /// transposing the sample rate with interpolation.
 ///
 /// Author        : Copyright (c) Olli Parviainen
-/// Author e-mail : oparviai @ iki.fi
-/// SoundTouch WWW: http://www.iki.fi/oparviai/soundtouch
+/// Author e-mail : oparviai 'at' iki.fi
+/// SoundTouch WWW: http://www.surina.net/soundtouch
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2005-02-10 05:11:55 -0800 (Thu, 10 Feb 2005) $
-// File revision : $Revision: 857 $
+// Last changed  : $Date: 2014-01-07 21:41:23 +0200 (ti, 07 tammi 2014) $
+// File revision : $Revision: 4 $
 //
-// $Id: AAFilter.h 857 2005-02-10 13:11:55Z tuehaste $
+// $Id: AAFilter.h 187 2014-01-07 19:41:23Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -45,6 +45,7 @@
 #define AAFilter_H
 
 #include "STTypes.h"
+#include "FIFOSampleBuffer.h"
 
 namespace soundtouch
 {
@@ -84,6 +85,14 @@ public:
                   const SAMPLETYPE *src, 
                   uint numSamples, 
                   uint numChannels) const;
+
+    /// Applies the filter to the given src & dest pipes, so that processed amount of
+    /// samples get removed from src, and produced amount added to dest 
+    /// Note : The amount of outputted samples is by value of 'filter length' 
+    /// smaller than the amount of input samples.
+    uint evaluate(FIFOSampleBuffer &dest, 
+                  FIFOSampleBuffer &src) const;
+
 };
 
 }

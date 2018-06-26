@@ -15,27 +15,39 @@
 
 #include <stdio.h>
 #include <vector>
+#include <math.h>
 
-#include "bpmdetect.h"
+#include "BPMDetect.h"
 
+#define ENERGY_HISTORY 25
 
 class ofxBPMDetector
 {
     public:
-    
-    /// @note _maxBpm should be at least 2 * _minBpm, otherwise BPM won't always be detected
-    ofxBPMDetector(int numChannels = 2, int sampleRate = 44100, int minBPM= MIN_BPM, int maxBPM = MAX_BPM);
+
+    ofxBPMDetector(int numChannels, int sampleRate, int spectrumSize);
     ~ofxBPMDetector();
 
-    void processFrame(std::vector<float> inputs, int nChannels);
-    void processFrame(float *input, int bufferSize, int nChannels);
-    float getBPM();
+    void    processFrame(std::vector<float> inputs, int nChannels);
+    void    processFrame(float *input, int bufferSize, int nChannels);
+
+    void    setSpectrumSize(int spectrumSize);
+
+    float   getBPM();
+    bool    getPeak(float &power);
     
-    BpmDetect *detector;
+    soundtouch::BPMDetect *detector;
+
+    float   energyHistory[ENERGY_HISTORY];
+    float   averageEnergy;
+    float   variance;
+    float   beatValue;
+    int     historyPos;
 
     private:
-    int nChannels = 2;      // mono or stereo
-    int sampleRate = 44100; // sampling rate
+    int nChannels = 1;
+    int sampleRate = 44100;
+    int spectrumSize = 129;
 };
 
 

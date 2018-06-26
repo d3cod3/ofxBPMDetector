@@ -1,20 +1,3 @@
-/***************************************************************************
-bpmdetect.h  -  adaption of the soundtouch bpm detection code
--------------------
-begin                : Sat, Aug 4., 2007
-copyright            : (C) 2007 by Micah Lee
-email                : snipexv@gmail.com
-***************************************************************************/
-
-/***************************************************************************
-*                                                                         *
-*   This program is free software; you can redistribute it and/or modify  *
-*   it under the terms of the GNU General Public License as published by  *
-*   the Free Software Foundation; either version 2 of the License, or     *
-*   (at your option) any later version.                                   *
-*                                                                         *
-***************************************************************************/
-
 ////////////////////////////////////////////////////////////////////////////////
 ///
 /// Beats-per-minute (BPM) detection routine.
@@ -43,10 +26,10 @@ email                : snipexv@gmail.com
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2006/02/05 16:44:06 $
-// File revision : $Revision: 1.5 $
+// Last changed  : $Date: 2016-01-12 19:24:46 +0200 (ti, 12 tammi 2016) $
+// File revision : $Revision: 4 $
 //
-// $Id: BPMDetect.h,v 1.5 2006/02/05 16:44:06 Olli Exp $
+// $Id: BPMDetect.h 239 2016-01-12 17:24:46Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -77,36 +60,23 @@ email                : snipexv@gmail.com
 #include "STTypes.h"
 #include "FIFOSampleBuffer.h"
 
-#ifdef __WIN__
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef short int16_t;
-typedef unsigned short uint16_t;
-typedef long int32_t;
-typedef unsigned long uint32_t;
-typedef long long int64_t;
-typedef unsigned long long uint64_t;
-#endif
+namespace soundtouch
+{
 
 /// Minimum allowed BPM rate. Used to restrict accepted result above a reasonable limit.
-#define MIN_BPM 75
+#define MIN_BPM 29
 
 /// Maximum allowed BPM rate. Used to restrict accepted result below a reasonable limit.
-#define MAX_BPM 170
+#define MAX_BPM 200
+
 
 /// Class for calculating BPM rate for audio data.
-class BpmDetect
+class BPMDetect
 {
 protected:
     /// Auto-correlation accumulator bins.
     float *xcorr;
     
-    /// Amplitude envelope sliding average approximation level accumulator
-    float envelopeAccu;
-
-    /// RMS volume sliding average approximation level accumulator
-    float RMSVolumeAccu;
-
     /// Sample average counter.
     int decimateCount;
 
@@ -114,38 +84,23 @@ protected:
     soundtouch::LONG_SAMPLETYPE decimateSum;
 
     /// Decimate sound by this coefficient to reach approx. 500 Hz.
-    unsigned int decimateBy;
+    int decimateBy;
 
     /// Auto-correlation window length
-    unsigned int windowLen;
+    int windowLen;
 
     /// Number of channels (1 = mono, 2 = stereo)
-    unsigned int channels;
+    int channels;
 
     /// sample rate
-    unsigned int sampleRate;
-
-	/// Maximum acceptable bpm
-	unsigned int maxBpm;
-
-	/// Minumum acceptable bpm
-	unsigned int minBpm;
+    int sampleRate;
 
     /// Beginning of auto-correlation window: Autocorrelation isn't being updated for
     /// the first these many correlation bins.
-    unsigned int windowStart;
+    int windowStart;
  
-    // if it's desired that the system adapts automatically to
-    // various bpms, e.g. in processing continouos music stream.
-    // The 'xcorr_decay' should be a value that's smaller than but
-    // close to one, and should also depend on 'process_samples' value.
-    float xcorr_decay = 0.9999;
-    
     /// FIFO-buffer for decimated processing samples.
     soundtouch::FIFOSampleBuffer *buffer;
-
-    /// Initialize the class for processing.
-    void init(int numChannels, unsigned int sampleRate);
 
     /// Updates auto-correlation function for given number of decimated samples that 
     /// are read from the internal 'buffer' pipe (samples aren't removed from the pipe 
@@ -167,23 +122,17 @@ protected:
                       int numsamples                    ///< Number of samples in buffer
                       );
 
+    /// remove constant bias from xcorr data
+    void removeBias();
+
 public:
     /// Constructor.
-    /// @note _maxBpm should be at least 2 * _minBpm, otherwise BPM won't always be detected
-    BpmDetect(int numChannels,          ///< Number of channels in sample data.
-              int sampleRate,           ///< Sample rate in Hz.
-              int _minBpm = MIN_BPM,    ///< Minimum acceptable BPM
-              int _maxBpm = MAX_BPM     ///< Maximum acceptable BPM
-    );
+    BPMDetect(int numChannels,  ///< Number of channels in sample data.
+              int sampleRate    ///< Sample rate in Hz.
+              );
 
     /// Destructor.
-    virtual ~BpmDetect();
-
-    /**
-     * Multiplying or dividing BPM by 2 if value is lower than min or greater than max
-     * @return corrected BPM (can be greater than max)
-     */
-    static float correctBPM( float BPM, int min, int max );
+    virtual ~BPMDetect();
 
     /// Inputs a block of samples for analyzing: Envelopes the samples and then
     /// updates the autocorrelation estimation. When whole song data has been input
@@ -191,8 +140,8 @@ public:
     /// function. 
     /// 
     /// Notice that data in 'samples' array can be disrupted in processing.
-    void inputSamples(soundtouch::SAMPLETYPE *samples,  ///< Pointer to input/working data buffer
-                      int numSamples                    ///< Number of samples in buffer
+    void inputSamples(const soundtouch::SAMPLETYPE *samples,    ///< Pointer to input/working data buffer
+                      int numSamples                            ///< Number of samples in buffer
                       );
 
 
@@ -202,9 +151,9 @@ public:
     ///
     /// \return Beats-per-minute rate, or zero if detection failed.
     float getBpm();
-    
-    // Clear buffer and reset
-    void reset();
+
 };
+
+}
 
 #endif // _BPMDetect_H_
