@@ -17,7 +17,14 @@
 #include <vector>
 #include <math.h>
 
-#include "BPMDetect.h"
+#ifdef TARGET_LINUX
+    #include "lib/soundtouch/BPMDetect.h"
+#elif defined(TARGET_OSX)
+    #include "BPMDetect.h"
+#elif defined(TARGET_WIN32)
+    #include "BPMDetect.h"
+#endif
+
 
 #define ENERGY_HISTORY 25
 
@@ -35,7 +42,7 @@ class ofxBPMDetector
 
     float   getBPM();
     bool    getPeak(float &power);
-    
+
     soundtouch::BPMDetect *detector;
 
     float   energyHistory[ENERGY_HISTORY];
