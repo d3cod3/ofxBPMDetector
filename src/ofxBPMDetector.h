@@ -17,13 +17,7 @@
 #include <vector>
 #include <math.h>
 
-#ifdef TARGET_LINUX
-    #include "lib/soundtouch/BPMDetect.h"
-#elif defined(TARGET_OSX)
-    #include "BPMDetect.h"
-#elif defined(TARGET_WIN32)
-    #include "BPMDetect.h"
-#endif
+#include "BPMDetect.h"
 
 
 #define ENERGY_HISTORY 25
